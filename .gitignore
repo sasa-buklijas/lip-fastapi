@@ -4,3 +4,4 @@
 
 venv*
 .vscode/settings.json
+modern_python_web_development_book/src/db/cryptid.db
