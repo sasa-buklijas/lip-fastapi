@@ -7,3 +7,4 @@ venv*
 modern_python_web_development_book/src/db/cryptid.db
 modern_python_web_development_book/.DS_Store
 modern_python_web_development_book/.vscode/settings.json
+/vene-3_12_2
