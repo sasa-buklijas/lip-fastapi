@@ -7,10 +7,10 @@ from fastapi import FastAPI, Request
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print('Before yield is shutdown')
-    # read-write global variable access per-request
-    app.state.global_rw = 0
-    # this is just read only global variable access per-request
-    yield {'global_read_only': 0}   
+    # read-write lifetime variable access per-request
+    app.state.lifetime_rw = 0
+    # this is just read only lifetime variable access per-request
+    yield {'lifetime_read_only': 5}   
     print('After yield is shutdown')
 
 
@@ -20,27 +20,37 @@ app = FastAPI(lifespan=lifespan)
 
 @app.get("/inc/") 
 async def inc(request: Request):
-    # only local update
-    request.state.global_read_only = request.state.global_read_only + 5
-    # global update 
-    request.app.state.global_rw += 1
-    # global did not get updated
+    # only local update, for this request
+    request.state.lifetime_read_only = request.state.lifetime_read_only + 5
+    print(f'{request.state.lifetime_read_only=}')
+    print(f'{type(request.state.lifetime_read_only)=} in path function.')
+    # lifetime update 
+    app.state.lifetime_rw += 1
+
     # this is sending int int
-    #await f_1(request.state.global_read_only, request.app.state.global_rw)
+    #wait f_1(request.state.lifetime_read_only, request.app.state.lifetime_rw)
+
     # this will update it, If I send state then they have access
     # this is sending int, rw=<starlette.datastructures.State object at 0x10ca83080>
-    await f_1(request.state.global_read_only, request.app.state)
-    return {'times_called': request.app.state.global_rw, 'global_read_only': request.state.global_read_only}
+    # same functionality as above, but I think it is easier to read when request.app.state is send
+    await f_1(request.state.lifetime_read_only, request.app.state)
+    return {'lifetime_read_only': request.state.lifetime_read_only, 'times_called': app.state.lifetime_rw}
 
 
 async def f_1(ro, rw):
+    # this is ibtresting here type(ro) is request.state.lifetime_read_only
+    # but it is int in async def inc(request: Request):
     print(f'f_1 {ro=} {type(ro)=}')
     print(f'f_1 {rw=} {type(rw)=}')
-    # this will not work 
-    #rw += 5
+    # this will not work, it is not possible to update
+    # request.state.lifetime_read_only
+    ro += 5
 
-    # this is WORKING when we send request.app.state
-    rw.global_rw += 5
+    # this is WORKING when we send app.state
+    rw.lifetime_rw += 1
+    # it is working also, if I send variable directly
+    # for when: await f_1(request.state.lifetime_read_only, request.app.state.lifetime_rw)
+    #rw += 1
 
     # do not know what is request
-    #print(f'f_1 {request.state.global_read_only=}')
+    #print(f'f_1 {request.state.lifetime_read_only=}')
